@@ -1,5 +1,18 @@
-from nicegui import app, ui
+from nicegui import native, app, ui
 import ascon as asc
+from datetime import timezone
+import datetime
+import pytz
+
+def nowDatetime_price():
+    utc_now = datetime.datetime.now(timezone.utc)
+    local_tz = pytz.timezone('Europe/Istanbul')
+    local_dt = utc_now.replace(tzinfo=pytz.utc).astimezone(local_tz)
+    tarih = local_dt.strftime("%y%m%d%H%M%S")
+    return tarih
+
+global tarih1
+global tarih2
 
 app.native.window_args['resizable'] = False
 
@@ -12,33 +25,50 @@ def sifirla():
     tagText.value = ""
     sonucText.value = ""
     methodToggle.value = 1
-
+    tarih1 = ""
+    tarih2 = ""
 
 
 def sifrele():
-    
-    if sifText.value != "" and bVeriText.value != "":
-        data = sifText.value
-        bData = bVeriText.value
-        method = methodlar[methodToggle.value]
-        print(method)
-        deger = asc.sifrele_aead(data,bData,method)
+    tarih1 = nowDatetime_price()
+    print(f"Tarih1: {tarih1}")
 
-        anahtar = deger[0]
-        nonce = deger[1]
-        sonuc = deger[2]
-        tag = deger[3]
+    #if sifText.value != "" and bVeriText.value != "":
+    data = sifText.value
+    bData = bVeriText.value
+    method = methodlar[methodToggle.value]
+    print(method)
+    deger = asc.sifrele_aead(data,bData,method)
 
-        anahtarText.value = anahtar
-        nonceText.value = nonce
-        tagText.value = tag
-        sonucText.value = sonuc
-    else:
-        ui.notify("Alanları Boş Bırakmayın")
+    anahtar = deger[0]
+    nonce = deger[1]
+    sonuc = deger[2]
+    tag = deger[3]
+
+    anahtarText.value = anahtar
+    nonceText.value = nonce
+    tagText.value = tag
+    sonucText.value = sonuc
+    tarih2 = nowDatetime_price()
+    print(f"Tarih2: {tarih2}")
+
+    tarih1 = datetime.datetime.strptime(tarih1, "%y%m%d%H%M%S")
+    print(f"yeni tarih1: {tarih1} {type(tarih1)}")
+    tarih2 = datetime.datetime.strptime(tarih2, "%y%m%d%H%M%S")
+    print(f"yeni tarih2: {tarih2} {type(tarih2)}")
+
+    subs = tarih2 - tarih1
+    print(f"subs: {subs.total_seconds()}")
+    ui.notify(f"Şifreleme Metodu: {method} Süre: {subs.total_seconds()}")
+    # else:
+    #     ui.notify("Alanları Boş Bırakmayın")
 
 
 
 def desifrele():
+    tarih1 = nowDatetime_price()
+    print(f"Tarih1: {tarih1}")
+
     method = methodlar[methodToggle2.value]
     bdata = bVeriText2.value
     dkey = bytes.fromhex(anahtarText2.value) 
@@ -47,7 +77,18 @@ def desifrele():
 
     sonuc = asc.desifrele_aead(bdata,dkey,dnonce,dshex,method)
     sonucText2.value = sonuc
-        
+
+    tarih2 = nowDatetime_price()
+    print(f"Tarih2: {tarih2}")
+
+    tarih1 = datetime.datetime.strptime(tarih1, "%y%m%d%H%M%S")
+    print(f"yeni tarih1: {tarih1} {type(tarih1)}")
+    tarih2 = datetime.datetime.strptime(tarih2, "%y%m%d%H%M%S")
+    print(f"yeni tarih2: {tarih2} {type(tarih2)}")
+
+    subs = tarih2 - tarih1
+    print(f"subs: {subs.total_seconds()}")
+    ui.notify(f"Deşifreleme Metodu: {method} Süre: {subs.total_seconds()}")
 
 
 with ui.tabs().classes('w-full') as tabs:
@@ -103,4 +144,4 @@ with ui.tab_panels(tabs, value=sifreleTab).classes('w-full'):
 
 
 
-ui.run(reload=False,native=True, window_size=(1000, 700), fullscreen=False, language='tr', title='SibAscon')
+ui.run(reload=False,native=True, window_size=(1000, 700), fullscreen=False, language='tr', title='ASCON', port=native.find_open_port())
